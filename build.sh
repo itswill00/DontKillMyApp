@@ -41,13 +41,18 @@ echo "deploy to /data/adb/modules/donykillmyapp"
 su -c "
   M=/data/adb/modules/donykillmyapp
   mkdir -p \$M/system/bin \$M/webroot
-  for f in module.prop system.prop post-fs-data.sh service.sh action.sh uninstall.sh apps.json; do
+  for f in module.prop system.prop post-fs-data.sh service.sh action.sh uninstall.sh; do
     [ -f '$D/\$f' ] && cp -f '$D/\$f' \$M/ 2>/dev/null || true
   done
+  # Never overwrite device apps.json with placeholder []; keep live snapshot if exists
+  if [ ! -s \$M/apps.json ] || [ \"\$(wc -c < \$M/apps.json 2>/dev/null)\" -lt 10 ]; then
+    [ -f '$D/apps.json' ] && cp -f '$D/apps.json' \$M/apps.json 2>/dev/null || echo '[]' > \$M/apps.json
+  fi
   cp -rf '$D/system' \$M/ 2>/dev/null || true
   cp -rf '$D/webroot' \$M/ 2>/dev/null || true
   chmod 755 \$M/*.sh \$M/system/bin/* 2>/dev/null || true
-  chmod 644 \$M/webroot/* \$M/*.prop \$M/apps.json 2>/dev/null || true
+  chmod 644 \$M/webroot/* \$M/*.prop 2>/dev/null || true
+  [ -f \$M/apps.json ] && chmod 644 \$M/apps.json 2>/dev/null || true
   chown -R root:root \$M 2>/dev/null || true
   chcon -R u:object_r:system_file:s0 \$M 2>/dev/null || true
   echo deployed

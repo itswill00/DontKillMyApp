@@ -584,6 +584,66 @@ static void cmd_set_all_unrestricted(void) {
     printf("{\"status\":\"ok\",\"action\":\"set_all_unrestricted\"}\n");
 }
 
+static void cmd_rebuild_apps(void) {
+    // Fast native generator - no per-pkg PowerKeeper queries, just pm + deviceidle
+    FILE *tmp = fopen(APPS_FILE ".tmp", "w");
+    if (!tmp) { printf("{\"error\":\"write_fail\"}\n"); return; }
+
+    // Get user pkgs set via pm list packages -3
+    FILE *fp = popen("pm list packages -3 2>/dev/null | cut -d: -f2", "r");
+    char user_pkgs[8192] = {0};
+    if (fp) {
+        char line[256];
+        while (fgets(line, sizeof(line), fp)) {
+            size_t l = strlen(line);
+            while (l > 0 && (line[l-1] == '\n' || line[l-1] == '\r')) line[--l] = '\0';
+            if (l == 0) continue;
+            strncat(user_pkgs, ",", sizeof(user_pkgs) - strlen(user_pkgs) - 1);
+            strncat(user_pkgs, line, sizeof(user_pkgs) - strlen(user_pkgs) - 1);
+            strncat(user_pkgs, ",", sizeof(user_pkgs) - strlen(user_pkgs) - 1);
+        }
+        pclose(fp);
+    }
+
+    // Get whitelist dump once
+    char wl_out[16384] = {0};
+    fp = popen("dumpsys deviceidle whitelist 2>/dev/null", "r");
+    if (fp) {
+        fread(wl_out, 1, sizeof(wl_out) - 1, fp);
+        pclose(fp);
+    }
+
+    fprintf(tmp, "[");
+    bool first = true;
+
+    fp = popen("pm list packages 2>/dev/null | cut -d: -f2", "r");
+    if (!fp) { fclose(tmp); printf("{\"error\":\"pm_fail\"}\n"); return; }
+
+    char pkg[256];
+    while (fgets(pkg, sizeof(pkg), fp)) {
+        size_t l = strlen(pkg);
+        while (l > 0 && (pkg[l-1] == '\n' || pkg[l-1] == '\r')) pkg[--l] = '\0';
+        if (l == 0) continue;
+
+        char needle[512];
+        snprintf(needle, sizeof(needle), ",%s,", pkg);
+        bool is_user = strstr(user_pkgs, needle) != NULL;
+        // whitelist: check for ",pkg," in dumpsys output (format: type,pkg,uid)
+        bool whitelisted = strstr(wl_out, needle) != NULL;
+
+        if (!first) fprintf(tmp, ",");
+        first = false;
+        fprintf(tmp, "{\"pkg\":\"%s\",\"bgControl\":\"noRestrict\",\"whitelisted\":%s,\"isUser\":%s}",
+                pkg, whitelisted ? "true" : "false", is_user ? "true" : "false");
+    }
+    pclose(fp);
+
+    fprintf(tmp, "]");
+    fclose(tmp);
+    rename(APPS_FILE ".tmp", APPS_FILE);
+    printf("{\"status\":\"ok\",\"action\":\"rebuild_apps\"}\n");
+}
+
 static void cmd_toggle(const char *key, const char *val) {
     if (!key || !val) {
         printf("{\"error\":\"missing_params\"}\n");
@@ -757,6 +817,8 @@ int main(int argc, char **argv) {
         cmd_whitelist_app(argv[2], argv[3]);
     } else if (strcmp(action, "toggle") == 0 && argc >= 4) {
         cmd_toggle(argv[2], argv[3]);
+    } else if (strcmp(action, "rebuild_apps") == 0) {
+        cmd_rebuild_apps();
     } else if (strcmp(action, "logs") == 0) {
         cmd_logs();
     } else {

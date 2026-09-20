@@ -123,6 +123,36 @@ pacify_user_apps() {
 }
 pacify_user_apps
 
+# ---------- Generate apps.json snapshot for WebUI (all OEMs) ----------
+# Delegates to native engine (fast, no per-pkg PowerKeeper queries)
+generate_apps_json() {
+    BIN="$MODDIR/system/bin/libdonykillmyapp.so"
+    if [ -x "$BIN" ] && "$BIN" rebuild_apps >/dev/null 2>&1; then
+        return 0
+    fi
+    # Fallback shell generator (no per-pkg content query, just pm + whitelist)
+    APPS_TMP="$MODDIR/apps.json.tmp"
+    USER_LIST="$(pm list packages -3 2>/dev/null | cut -d: -f2)"
+    WL_OUT="$(dumpsys deviceidle whitelist 2>/dev/null)"
+    echo -n "[" > "$APPS_TMP"
+    FIRST=1
+    for pkg in $(pm list packages 2>/dev/null | cut -d: -f2); do
+        [ -z "$pkg" ] && continue
+        case ",$USER_LIST," in *",${pkg},"*) IS_USER=true ;; *) IS_USER=false ;; esac
+        echo "$WL_OUT" | grep -q "$pkg" && WL=true || WL=false
+        [ $FIRST -eq 0 ] && echo -n "," >> "$APPS_TMP"
+        FIRST=0
+        printf '{"pkg":"%s","bgControl":"noRestrict","whitelisted":%s,"isUser":%s}' "$pkg" "$WL" "$IS_USER" >> "$APPS_TMP"
+    done
+    echo "]" >> "$APPS_TMP"
+    mv -f "$APPS_TMP" "$MODDIR/apps.json" 2>/dev/null
+    chmod 644 "$MODDIR/apps.json" 2>/dev/null || true
+}
+
+if [ ! -s "$MODDIR/apps.json" ] || [ "$(wc -c < "$MODDIR/apps.json" 2>/dev/null)" -lt 10 ]; then
+    generate_apps_json
+fi
+
 # ---------- Snapshot for WebUI ----------
 TOTAL_COUNT=$(pm list packages 2>/dev/null | wc -l)
 USER_COUNT=$(pm list packages -3 2>/dev/null | wc -l)
@@ -187,5 +217,7 @@ chmod 644 "$MODDIR/state.json" 2>/dev/null || true
 
         # Re-apply idle whitelist periodically (all OEMs, cheap)
         pacify_user_apps
+        # Keep apps.json fresh (regen if stale or missing)
+        [ ! -s "$MODDIR/apps.json" ] && generate_apps_json
     done
 ) &
