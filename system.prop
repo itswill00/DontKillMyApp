@@ -1,21 +1,10 @@
-persist.sys.miui_scout_enable=false
-persist.sys.miui_scout_binder_full_kill_process=false
-persist.sys.debug.enable_scout_memory_monitor=false
-persist.sys.debug.enable_scout_memory_resume=false
-persist.sys.scout_binder_gki=false
+# DontKillMyApp - universal system.prop (resetprop override, OEM-agnostic)
+# Copyright (C) 2026 @itswill00
+# NOTE: post-fs-data.sh is the real source of truth (OEM-gated).
+# This file only covers universal LMKD + phantom flags so service.sh fallback works on Zygoted devices.
+# Xiaomi-only props are applied conditionally in post-fs-data.sh, not here - keeping boot safe on OneUI/XOS/ColorOS.
 
-persist.sys.spc.enabled=false
-persist.sys.spc.proc_restart_enable=false
-persist.sys.spc.protect.critical.count=100
-
-persist.sys.memory_standard.enable=false
-persist.sys.memory_standard.appheap.enable=false
-
-persist.sys.miui.camera.boost.killAdj_threshold=999:999:999:999
-
-persist.vendor.duraspeed.app.on=0
-persist.vendor.duraspeed.support=0
-
+# Universal: relax LMKD PSI thresholds (all devices)
 ro.lmk.psi_partial_stall_ms=250
 ro.lmk.psi_complete_stall_ms=700
 ro.lmk.thrashing_limit=100
@@ -23,5 +12,5 @@ ro.lmk.thrashing_limit_decay=10
 ro.lmk.kill_timeout_ms=250
 persist.device_config.lmkd_native.thrashing_limit_critical=600
 
+# Universal: phantom monitor (AOSP 12+)
 persist.sys.fflag.override.settings_enable_monitor_phantom_procs=false
-

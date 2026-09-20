@@ -25,7 +25,7 @@
           v-else-if="activeTab === 'tunables'"
           class="badge-pill active"
         >
-          v1.0.0
+          {{ status.stats.pacified_killers }}/{{ status.stats.available_killers }}
         </span>
         <button
           v-else-if="activeTab === 'logs'"
@@ -50,9 +50,7 @@
           </div>
 
           <p class="card-desc">
-            {{ status.stats.is_pacified
-              ? 'Scout watchdog, Smart Power Control, 5-minute standby killer, DuraSpeed, and Phantom Process limits are disabled. Apps continue running in background.'
-              : 'Default HyperOS background management is active. Inactive processes may be terminated by system watchdogs after 5 minutes.' }}
+            {{ dashboardDesc }}
           </p>
 
           <div style="display: flex; gap: 8px; margin-top: 4px;">
@@ -71,6 +69,9 @@
             >
               <span>Restore Defaults</span>
             </button>
+          </div>
+          <div v-if="status.device.oem" style="font-size: 10.5px; color: var(--outline); font-variant-numeric: tabular-nums;">
+            {{ oemLabel }} · {{ status.stats.available_killers }} killers available, {{ status.stats.pacified_killers }} optimized
           </div>
         </section>
 
@@ -110,73 +111,24 @@
           </div>
 
           <div class="status-list">
-            <div class="status-row">
+            <!-- Universal: Always present -->
+            <div v-if="status.caps.phantom" class="status-row">
               <div class="status-col">
                 <div class="status-name">Phantom Process Killer</div>
-                <div class="status-sub">Child process limit for ActivityManager</div>
+                <div class="status-sub">AOSP 12+ child process limit</div>
               </div>
               <span class="status-badge" :class="{ ok: status.killers.phantom_limit === '2147483647' }">
                 {{ status.killers.phantom_limit === '2147483647' ? 'Unlimited' : status.killers.phantom_limit }}
               </span>
             </div>
 
-            <div class="status-row">
+            <div v-if="status.caps.freezer" class="status-row">
               <div class="status-col">
                 <div class="status-name">Cached Apps Freezer</div>
-                <div class="status-sub">cgroup v2 task freezer</div>
+                <div class="status-sub">AOSP 14+ cgroup v2 task freezer</div>
               </div>
               <span class="status-badge" :class="{ ok: status.killers.cached_freezer === 'false' }">
                 {{ status.killers.cached_freezer === 'false' ? 'Disabled' : 'Active' }}
-              </span>
-            </div>
-
-            <div class="status-row">
-              <div class="status-col">
-                <div class="status-name">Xiaomi Scout Watchdog</div>
-                <div class="status-sub">Binder thread and buffer monitor</div>
-              </div>
-              <span class="status-badge" :class="{ ok: !status.killers.scout_enable }">
-                {{ !status.killers.scout_enable ? 'Disabled' : 'Active' }}
-              </span>
-            </div>
-
-            <div class="status-row">
-              <div class="status-col">
-                <div class="status-name">Smart Power Control (SPC)</div>
-                <div class="status-sub">Background task limiter</div>
-              </div>
-              <span class="status-badge" :class="{ ok: !status.killers.spc_enable }">
-                {{ !status.killers.spc_enable ? 'Disabled' : 'Active' }}
-              </span>
-            </div>
-
-            <div class="status-row">
-              <div class="status-col">
-                <div class="status-name">Memory Standard</div>
-                <div class="status-sub">300-second standby timeout</div>
-              </div>
-              <span class="status-badge" :class="{ ok: !status.killers.memory_standard_enable }">
-                {{ !status.killers.memory_standard_enable ? 'Disabled' : '300s' }}
-              </span>
-            </div>
-
-            <div class="status-row">
-              <div class="status-col">
-                <div class="status-name">MediaTek DuraSpeed</div>
-                <div class="status-sub">Vendor background reclamation</div>
-              </div>
-              <span class="status-badge" :class="{ ok: status.killers.duraspeed_disabled }">
-                {{ status.killers.duraspeed_disabled ? 'Disabled' : 'Active' }}
-              </span>
-            </div>
-
-            <div class="status-row">
-              <div class="status-col">
-                <div class="status-name">PowerKeeper Freezer</div>
-                <div class="status-sub">FrozenControlNewStatus</div>
-              </div>
-              <span class="status-badge" :class="{ ok: status.killers.pk_freezer === 'false' }">
-                {{ status.killers.pk_freezer === 'false' ? 'Disabled' : 'Active' }}
               </span>
             </div>
 
@@ -187,6 +139,69 @@
               </div>
               <span class="status-badge" :class="{ ok: status.killers.lmkd_psi_partial !== '35' }">
                 {{ status.killers.lmkd_psi_partial }} ms
+              </span>
+            </div>
+
+            <!-- Xiaomi-only -->
+            <div v-if="status.caps.xiaomi" class="status-row">
+              <div class="status-col">
+                <div class="status-name">Xiaomi Scout Watchdog</div>
+                <div class="status-sub">Binder thread and buffer monitor</div>
+              </div>
+              <span class="status-badge" :class="{ ok: !status.killers.scout_enable }">
+                {{ !status.killers.scout_enable ? 'Disabled' : 'Active' }}
+              </span>
+            </div>
+
+            <div v-if="status.caps.xiaomi" class="status-row">
+              <div class="status-col">
+                <div class="status-name">Smart Power Control (SPC)</div>
+                <div class="status-sub">Background task limiter</div>
+              </div>
+              <span class="status-badge" :class="{ ok: !status.killers.spc_enable }">
+                {{ !status.killers.spc_enable ? 'Disabled' : 'Active' }}
+              </span>
+            </div>
+
+            <div v-if="status.caps.xiaomi" class="status-row">
+              <div class="status-col">
+                <div class="status-name">Memory Standard</div>
+                <div class="status-sub">300-second standby timeout</div>
+              </div>
+              <span class="status-badge" :class="{ ok: !status.killers.memory_standard_enable }">
+                {{ !status.killers.memory_standard_enable ? 'Disabled' : '300s' }}
+              </span>
+            </div>
+
+            <div v-if="status.caps.pk" class="status-row">
+              <div class="status-col">
+                <div class="status-name">PowerKeeper Freezer</div>
+                <div class="status-sub">FrozenControlNewStatus</div>
+              </div>
+              <span class="status-badge" :class="{ ok: status.killers.pk_freezer === 'false' }">
+                {{ status.killers.pk_freezer === 'false' ? 'Disabled' : 'Active' }}
+              </span>
+            </div>
+
+            <!-- MediaTek -->
+            <div v-if="status.caps.duraspeed" class="status-row">
+              <div class="status-col">
+                <div class="status-name">MediaTek DuraSpeed</div>
+                <div class="status-sub">Vendor background reclamation</div>
+              </div>
+              <span class="status-badge" :class="{ ok: status.killers.duraspeed_disabled }">
+                {{ status.killers.duraspeed_disabled ? 'Disabled' : 'Active' }}
+              </span>
+            </div>
+
+            <!-- Samsung / OPlus / Transsion adaptive (shown as single unified row) -->
+            <div v-if="status.caps.samsung || status.caps.oplus || status.caps.transsion" class="status-row">
+              <div class="status-col">
+                <div class="status-name">Adaptive Battery</div>
+                <div class="status-sub">{{ adaptiveSub }}</div>
+              </div>
+              <span class="status-badge" :class="{ ok: status.stats.is_pacified }">
+                {{ status.stats.is_pacified ? 'Disabled' : 'Active' }}
               </span>
             </div>
           </div>
@@ -320,10 +335,12 @@
         <section class="md3-card">
           <div class="card-title-row">
             <span class="card-title">System Settings</span>
+            <span class="card-extra">{{ status.stats.pacified_killers }}/{{ status.stats.available_killers }} active</span>
           </div>
 
           <div style="display: flex; flex-direction: column;">
-            <div class="list-row">
+            <!-- Phantom (AOSP 12+) -->
+            <div v-if="status.caps.phantom" class="list-row">
               <div class="list-row-main">
                 <div class="list-row-title">Phantom Process Killer</div>
                 <div class="list-row-desc">ActivityManager 32-child process limit for apps and workers.</div>
@@ -340,10 +357,11 @@
               </label>
             </div>
 
-            <div class="list-row">
+            <!-- Freezer (AOSP 14+) -->
+            <div v-if="status.caps.freezer" class="list-row">
               <div class="list-row-main">
                 <div class="list-row-title">Cached Apps Freezer</div>
-                <div class="list-row-desc">Android 14 cgroup v2 task freezer for background sockets and workers.</div>
+                <div class="list-row-desc">cgroup v2 task freezer for background sockets and workers.</div>
               </div>
               <label class="md3-switch">
                 <input
@@ -357,7 +375,26 @@
               </label>
             </div>
 
+            <!-- LMKD always available -->
             <div class="list-row">
+              <div class="list-row-main">
+                <div class="list-row-title">Relax LMKD PSI Stall (250ms)</div>
+                <div class="list-row-desc">Prevents premature memory kills under brief pressure spikes.</div>
+              </div>
+              <label class="md3-switch">
+                <input
+                  type="checkbox"
+                  :checked="status.killers.lmkd_psi_partial !== '35'"
+                  @change="toggleFeature('lmkd', status.killers.lmkd_psi_partial === '35')"
+                />
+                <span class="md3-switch-track">
+                  <span class="md3-switch-thumb"></span>
+                </span>
+              </label>
+            </div>
+
+            <!-- MediaTek -->
+            <div v-if="status.caps.duraspeed" class="list-row">
               <div class="list-row-main">
                 <div class="list-row-title">MediaTek DuraSpeed</div>
                 <div class="list-row-desc">MediaTek memory reclamation daemon.</div>
@@ -374,6 +411,8 @@
               </label>
             </div>
 
+            <!-- Xiaomi-only rows -->
+            <template v-if="status.caps.xiaomi">
             <div class="list-row">
               <div class="list-row-main">
                 <div class="list-row-title">Xiaomi Scout Watchdog</div>
@@ -442,24 +481,7 @@
               </label>
             </div>
 
-            <div class="list-row">
-              <div class="list-row-main">
-                <div class="list-row-title">Relax LMKD PSI Stall (250ms)</div>
-                <div class="list-row-desc">Prevents premature memory kills under brief pressure spikes.</div>
-              </div>
-              <label class="md3-switch">
-                <input
-                  type="checkbox"
-                  :checked="status.killers.lmkd_psi_partial !== '35'"
-                  @change="toggleFeature('lmkd', status.killers.lmkd_psi_partial === '35')"
-                />
-                <span class="md3-switch-track">
-                  <span class="md3-switch-thumb"></span>
-                </span>
-              </label>
-            </div>
-
-            <div class="list-row">
+            <div v-if="status.caps.pk" class="list-row">
               <div class="list-row-main">
                 <div class="list-row-title">PowerKeeper Freezer</div>
                 <div class="list-row-desc">PowerKeeper background task suspension service.</div>
@@ -474,6 +496,29 @@
                   <span class="md3-switch-thumb"></span>
                 </span>
               </label>
+            </div>
+            </template>
+
+            <!-- Samsung / OPlus / Transsion adaptive -->
+            <div v-if="status.caps.samsung || status.caps.oplus || status.caps.transsion" class="list-row">
+              <div class="list-row-main">
+                <div class="list-row-title">Adaptive Battery</div>
+                <div class="list-row-desc">{{ adaptiveTunablesDesc }}</div>
+              </div>
+              <label class="md3-switch">
+                <input
+                  type="checkbox"
+                  :checked="status.stats.is_pacified"
+                  @change="toggleFeature('adaptive', !status.stats.is_pacified)"
+                />
+                <span class="md3-switch-track">
+                  <span class="md3-switch-thumb"></span>
+                </span>
+              </label>
+            </div>
+
+            <div v-if="!status.caps.phantom && !status.caps.freezer && !status.caps.xiaomi && !status.caps.duraspeed && !status.caps.samsung && !status.caps.oplus && !status.caps.transsion" style="text-align: center; padding: 16px; color: var(--on-surface-variant); font-size: 12px;">
+              All killers are managed via Memory and deviceidle; no vendor-specific toggles on this device.
             </div>
           </div>
         </section>
@@ -495,7 +540,7 @@
           </div>
 
           <p class="card-desc">
-            Filtered from logcat buffer: lmkd, am_kill, powerkeeper, scout, phantom.
+            Filtered from logcat buffer: lmkd, am_kill, powerkeeper, scout, phantom{{ status.caps.samsung ? ', samsung' : '' }}.
           </p>
 
           <div class="console-box">
@@ -581,15 +626,75 @@ const headerTitle = computed(() => {
 const headerSub = computed(() => {
   switch (activeTab.value) {
     case 'apps': return 'Per-app background execution permissions'
-    case 'tunables': return 'HyperOS & Android 14 killer components'
+    case 'tunables': return tunablesSub.value
     case 'logs': return 'Process termination traces from logcat'
-    default: return status.value.device.model ? `${status.value.device.model} · HyperOS ${status.value.device.os} (Android ${status.value.device.android})` : 'Background Execution'
+    default: return deviceSub.value
   }
 })
 
+const tunablesSub = computed(() => {
+  const c = status.value.caps
+  if (c.xiaomi) return 'HyperOS & Android killers on this device'
+  if (c.samsung) return 'OneUI & Android killers on this device'
+  if (c.oplus) return 'ColorOS & Android killers on this device'
+  if (c.transsion) return 'XOS & Android killers on this device'
+  return 'Android background killers on this device'
+})
+
+const deviceSub = computed(() => {
+  const d = status.value.device
+  if (!d.model) return 'Universal background execution control'
+  const oem = d.oem === 'generic' ? '' : ` · ${d.skin}`
+  return `${d.model}${oem} (Android ${d.android}, SDK ${d.sdk || ''})`.trim()
+})
+
+const oemLabel = computed(() => {
+  const d = status.value.device
+  if (!d.oem) return 'This device'
+  if (d.oem === 'xiaomi') return `Xiaomi • ${d.skin}`
+  if (d.oem === 'samsung') return `Samsung • ${d.skin}`
+  if (d.oem === 'oplus') return `OPLUS • ${d.skin}`
+  if (d.oem === 'transsion') return `Transsion • ${d.skin}`
+  return `${d.oem} • ${d.skin}`
+})
+
+const dashboardDesc = computed(() => {
+  if (status.value.stats.is_pacified) {
+    const parts = []
+    if (status.value.caps.phantom) parts.push('Phantom limits')
+    if (status.value.caps.freezer) parts.push('Cached freezer')
+    if (status.value.caps.xiaomi) parts.push('Scout, SPC, Memory Standard, PowerKeeper')
+    if (status.value.caps.duraspeed) parts.push('DuraSpeed')
+    if (status.value.caps.samsung || status.value.caps.oplus || status.value.caps.transsion) parts.push('Adaptive Battery')
+    parts.push('LMKD pressure')
+    return `${parts.join(', ')} are pacified. Apps continue running in background.`
+  }
+  const c = status.value.caps
+  if (c.xiaomi) return 'Default HyperOS background management is active. Inactive processes may be terminated by watchdogs after 5 minutes.'
+  if (c.samsung) return 'OneUI adaptive battery and phantom limits may suspend background apps.'
+  if (c.oplus) return 'ColorOS battery optimization may restrict background execution.'
+  if (c.transsion) return 'XOS battery manager may restrict background execution.'
+  return 'Default Android background management is active. Background processes may be limited.'
+})
+
+const adaptiveSub = computed(() => {
+  if (status.value.caps.samsung) return 'OneUI adaptive battery + standby bucket throttling.'
+  if (status.value.caps.oplus) return 'ColorOS standby and battery optimization.'
+  if (status.value.caps.transsion) return 'XOS background freeze policy.'
+  return 'OEM adaptive battery.'
+})
+
+const adaptiveTunablesDesc = computed(() => {
+  if (status.value.caps.samsung) return 'OneUI Device Care adaptive battery and app standby.'
+  if (status.value.caps.oplus) return 'ColorOS/OxygenOS battery optimization.'
+  if (status.value.caps.transsion) return 'XOS/HiOS auto-start and standby policy.'
+  return 'OEM battery optimization.'
+})
+
 const status = ref({
-  device: { model: '', android: '', os: '' },
+  device: { model: '', android: '', os: '', oem: 'generic', skin: 'AOSP', sdk: 0 },
   ram: { total_mb: 0, used_mb: 0, free_mb: 0, zram_total_mb: 0, zram_used_mb: 0 },
+  caps: { phantom: false, freezer: false, duraspeed: false, pk: false, xiaomi: false, samsung: false, transsion: false, oplus: false },
   killers: {
     phantom_limit: '32',
     cached_freezer: 'true',
@@ -607,6 +712,8 @@ const status = ref({
     restricted_apps: 0,
     unrestricted_apps: 340,
     whitelisted_apps: 67,
+    available_killers: 1,
+    pacified_killers: 0,
     is_pacified: false
   }
 })
@@ -681,14 +788,18 @@ async function fetchStatus() {
 
 async function pacifyAll() {
   isApplying.value = true
+  // Optimistic update only for available killers
   status.value.stats.is_pacified = true
-  status.value.killers.phantom_limit = '2147483647'
-  status.value.killers.cached_freezer = 'false'
-  status.value.killers.duraspeed_disabled = true
-  status.value.killers.scout_enable = false
-  status.value.killers.spc_enable = false
-  status.value.killers.memory_standard_enable = false
-  status.value.killers.pk_freezer = 'false'
+  if (status.value.caps.phantom) status.value.killers.phantom_limit = '2147483647'
+  if (status.value.caps.freezer) status.value.killers.cached_freezer = 'false'
+  if (status.value.caps.duraspeed) status.value.killers.duraspeed_disabled = true
+  if (status.value.caps.xiaomi) {
+    status.value.killers.scout_enable = false
+    status.value.killers.spc_enable = false
+    status.value.killers.memory_standard_enable = false
+    status.value.killers.camera_boost_adj = '999:999:999:999'
+    if (status.value.caps.pk) status.value.killers.pk_freezer = 'false'
+  }
   status.value.killers.lmkd_psi_partial = '250'
   showToast('Applying optimizations...')
 
@@ -709,13 +820,16 @@ async function pacifyAll() {
 async function restoreStock() {
   isApplying.value = true
   status.value.stats.is_pacified = false
-  status.value.killers.phantom_limit = '32'
-  status.value.killers.cached_freezer = 'true'
-  status.value.killers.duraspeed_disabled = false
-  status.value.killers.scout_enable = true
-  status.value.killers.spc_enable = true
-  status.value.killers.memory_standard_enable = true
-  status.value.killers.pk_freezer = 'true'
+  if (status.value.caps.phantom) status.value.killers.phantom_limit = '32'
+  if (status.value.caps.freezer) status.value.killers.cached_freezer = 'true'
+  if (status.value.caps.duraspeed) status.value.killers.duraspeed_disabled = false
+  if (status.value.caps.xiaomi) {
+    status.value.killers.scout_enable = true
+    status.value.killers.spc_enable = true
+    status.value.killers.memory_standard_enable = true
+    status.value.killers.camera_boost_adj = '400:250:100:50'
+    if (status.value.caps.pk) status.value.killers.pk_freezer = 'true'
+  }
   status.value.killers.lmkd_psi_partial = '35'
   showToast('Restoring OEM defaults...')
 
@@ -804,8 +918,13 @@ async function toggleFeature(key, enable) {
   else if (key === 'pk_freezer') status.value.killers.pk_freezer = enable ? 'false' : 'true'
 
   try {
-    runBridgeJson('toggle', key, enable ? '1' : '0')
-    showToast(`Updated ${key}`)
+    const res = await runBridgeJson('toggle', key, enable ? '1' : '0')
+    if (res && res.status === 'skipped') {
+      showToast(`${key}: not available on this device`)
+      await fetchStatus()
+    } else {
+      showToast(`Updated ${key}`)
+    }
   } catch (e) {
     showToast(`Failed to toggle ${key}`)
   }
