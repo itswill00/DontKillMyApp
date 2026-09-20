@@ -1,30 +1,21 @@
-# DontKillMyApp - HyperOS & Android 14 System Properties
-# Copyright (C) 2026 @itswill00
-
-# 1. Disable MIUI Scout (Watchdog that kills apps on binder buffer/memory spikes)
 persist.sys.miui_scout_enable=false
 persist.sys.miui_scout_binder_full_kill_process=false
 persist.sys.debug.enable_scout_memory_monitor=false
 persist.sys.debug.enable_scout_memory_resume=false
 persist.sys.scout_binder_gki=false
 
-# 2. Disable Smart Power Control (SPC - limits protected background apps to 2)
 persist.sys.spc.enabled=false
 persist.sys.spc.proc_restart_enable=false
 persist.sys.spc.protect.critical.count=100
 
-# 3. Disable Xiaomi Memory Standard (5-minute background kill timer)
 persist.sys.memory_standard.enable=false
 persist.sys.memory_standard.appheap.enable=false
 
-# 4. Tame Camera Boost (Prevent camera opening from killing background apps down to adj 50)
 persist.sys.miui.camera.boost.killAdj_threshold=999:999:999:999
 
-# 5. Disable MediaTek DuraSpeed
 persist.vendor.duraspeed.app.on=0
 persist.vendor.duraspeed.support=0
 
-# 6. Relax LMKD PSI Thresholds (Prevent 35ms stall trigger happy kills on 8GB RAM)
 ro.lmk.psi_partial_stall_ms=250
 ro.lmk.psi_complete_stall_ms=700
 ro.lmk.thrashing_limit=100
@@ -32,5 +23,5 @@ ro.lmk.thrashing_limit_decay=10
 ro.lmk.kill_timeout_ms=250
 persist.device_config.lmkd_native.thrashing_limit_critical=600
 
-# 7. Android 14 Phantom Process Killer & Freezer flags
 persist.sys.fflag.override.settings_enable_monitor_phantom_procs=false
+

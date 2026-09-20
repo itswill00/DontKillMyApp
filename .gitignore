@@ -1,3 +1,6 @@
 node_modules/
 releases/
 webui/dist/
+# local personal snapshot (if you dump device state manually)
+apps.json.device.bak
+apps.json.personal.bak

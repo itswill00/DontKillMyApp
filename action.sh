@@ -1,27 +1,14 @@
 #!/system/bin/sh
-# DontKillMyApp - KernelSU Action Button Script
-# Copyright (C) 2026 @itswill00
-
 MODDIR="${0%/*}"
 
-echo "=========================================="
-echo "   DontKillMyApp - HyperOS Status & Sync"
-echo "=========================================="
+echo "[*] Checking system state..."
 
 PHANTOM=$(device_config get activity_manager max_phantom_processes 2>/dev/null)
-echo "[*] Phantom Process Limit : ${PHANTOM:-32} (Target: 2147483647)"
-
 FREEZER=$(device_config get activity_manager_native_boot use_freezer 2>/dev/null)
-echo "[*] Cached Apps Freezer   : ${FREEZER:-true} (Target: false)"
+echo "  Phantom limit: ${PHANTOM:-32}"
+echo "  Freezer:       ${FREEZER:-true}"
 
-FROZEN_STATUS=$(content query --uri content://com.miui.powerkeeper.configure/GlobalFeatureTable --projection configureName:configureParam --where "configureName='FrozenControlNewStatus'" 2>/dev/null | grep -o 'configureParam=[^ ]*' | cut -d= -f2)
-echo "[*] PowerKeeper Freezer   : ${FROZEN_STATUS:-unknown} (Target: false)"
-
-RESTRICTED_COUNT=$(content query --uri content://com.miui.powerkeeper.configure/userTable --projection pkgName --where "bgControl!='noRestrict'" 2>/dev/null | grep -c "Row:")
-echo "[*] Restricted Apps in PK : $RESTRICTED_COUNT"
-
-echo "------------------------------------------"
-echo "Syncing all anti-kill protections now..."
+echo "[*] Applying pacification..."
 
 device_config put activity_manager max_phantom_processes 2147483647 >/dev/null 2>&1
 settings put global settings_enable_monitor_phantom_procs false >/dev/null 2>&1
@@ -47,7 +34,5 @@ for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
     TOTAL_WHITELISTED=$((TOTAL_WHITELISTED + 1))
 done
 
-echo "[+] Whitelisted $TOTAL_WHITELISTED third-party user apps!"
-echo "[+] All apps set to 'noRestrict' in PowerKeeper!"
-echo "[✔] Anti-kill protections synchronized!"
-echo "=========================================="
+echo "[+] Done ($TOTAL_WHITELISTED apps whitelisted)."
+

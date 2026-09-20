@@ -89,6 +89,9 @@ fi
 
 # 3. Package module zip
 echo "packaging module zip..."
+EXTRA_FILES=""
+[ -f "$PROJECT_DIR/apps.json" ] && EXTRA_FILES="apps.json"
+
 zip -qr9 "$OUTPUT_DIR/$ZIP_NAME" \
     module.prop \
     system.prop \
@@ -99,30 +102,35 @@ zip -qr9 "$OUTPUT_DIR/$ZIP_NAME" \
     uninstall.sh \
     webroot \
     system \
+    $EXTRA_FILES \
     -x "webui/*" -x "src/*" -x "*.git*" -x "releases/*"
 
 # Create symlink or copy to latest
 cp -f "$OUTPUT_DIR/$ZIP_NAME" "$OUTPUT_DIR/DontKillMyApp-latest.zip"
+cp -f "$OUTPUT_DIR/$ZIP_NAME" /sdcard/DontKillMyApp-v1.0.0.zip 2>/dev/null || true
 echo "build completed: $OUTPUT_DIR/$ZIP_NAME"
 
-# 4. Deploy if requested
-if [ "$DEPLOY" = "true" ]; then
-    echo "deploying to /data/adb/modules/donykillmyapp..."
-    su -c "
-        mkdir -p /data/adb/modules/donykillmyapp
-        cp -af '$PROJECT_DIR/module.prop' /data/adb/modules/donykillmyapp/
-        cp -af '$PROJECT_DIR/system.prop' /data/adb/modules/donykillmyapp/
-        cp -af '$PROJECT_DIR/post-fs-data.sh' /data/adb/modules/donykillmyapp/
-        cp -af '$PROJECT_DIR/service.sh' /data/adb/modules/donykillmyapp/
-        cp -af '$PROJECT_DIR/action.sh' /data/adb/modules/donykillmyapp/
-        cp -af '$PROJECT_DIR/uninstall.sh' /data/adb/modules/donykillmyapp/
-        cp -rf '$PROJECT_DIR/system' /data/adb/modules/donykillmyapp/
-        cp -rf '$PROJECT_DIR/webroot' /data/adb/modules/donykillmyapp/
-        chmod 755 /data/adb/modules/donykillmyapp/*.sh 2>/dev/null || true
-        chmod 755 /data/adb/modules/donykillmyapp/system/bin/* 2>/dev/null || true
-        chmod 644 /data/adb/modules/donykillmyapp/webroot/* 2>/dev/null || true
-        chown -R root:root /data/adb/modules/donykillmyapp
-        chcon -R u:object_r:system_file:s0 /data/adb/modules/donykillmyapp 2>/dev/null || true
-    "
-    echo "deployment successful!"
-fi
+    # 4. Deploy if requested
+    if [ "$DEPLOY" = "true" ]; then
+        echo "deploying to /data/adb/modules/donykillmyapp..."
+        su -c "
+            mkdir -p /data/adb/modules/donykillmyapp
+            cp -af '$PROJECT_DIR/module.prop' /data/adb/modules/donykillmyapp/
+            cp -af '$PROJECT_DIR/system.prop' /data/adb/modules/donykillmyapp/
+            cp -af '$PROJECT_DIR/post-fs-data.sh' /data/adb/modules/donykillmyapp/
+            cp -af '$PROJECT_DIR/service.sh' /data/adb/modules/donykillmyapp/
+            cp -af '$PROJECT_DIR/action.sh' /data/adb/modules/donykillmyapp/
+            cp -af '$PROJECT_DIR/uninstall.sh' /data/adb/modules/donykillmyapp/
+            [ -f '$PROJECT_DIR/apps.json' ] && cp -af '$PROJECT_DIR/apps.json' /data/adb/modules/donykillmyapp/
+            cp -rf '$PROJECT_DIR/system' /data/adb/modules/donykillmyapp/
+            cp -rf '$PROJECT_DIR/webroot' /data/adb/modules/donykillmyapp/
+            chmod 755 /data/adb/modules/donykillmyapp/*.sh 2>/dev/null || true
+            chmod 755 /data/adb/modules/donykillmyapp/system/bin/* 2>/dev/null || true
+            chmod 755 /data/adb/modules/donykillmyapp/webroot /data/adb/modules/donykillmyapp/system /data/adb/modules/donykillmyapp/system/bin 2>/dev/null || true
+            chmod 644 /data/adb/modules/donykillmyapp/webroot/* 2>/dev/null || true
+            [ -f /data/adb/modules/donykillmyapp/apps.json ] && chmod 644 /data/adb/modules/donykillmyapp/apps.json
+            chown -R root:root /data/adb/modules/donykillmyapp
+            chcon -R u:object_r:system_file:s0 /data/adb/modules/donykillmyapp 2>/dev/null || true
+        "
+        echo "deployment successful!"
+    fi

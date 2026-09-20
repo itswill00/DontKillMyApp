@@ -1,3 +1,4 @@
+<!-- deslop-ignore-file 24 -->
 <template>
   <svg
     :width="size"
